@@ -8,16 +8,24 @@ CRemoteTcpServer::CRemoteTcpServer() {
 	Get_Current_Dir();
 
         int isCreate = mkdir(InitDir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-	if( !isCreate )
-	        printf("create path:%s\n", InitDir.c_str());
-	else
-                printf("create path failed!\n");
+	if( !isCreate ) {
+	        Print_Current_Date();
+	        printf("Create Path:%s\n", InitDir.c_str());
+	}
+	else {
+	        Print_Current_Date();
+                printf("Create Path:%s Failed!\n", InitDir.c_str());
+	}
 
         isCreate = mkdir(m_CurDir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-	if( !isCreate )
-	        printf("create path:%s\n", m_CurDir.c_str());
-	else
-                printf("create path failed!\n");
+	if( !isCreate ) {
+	        Print_Current_Date();
+	        printf("Create Path:%s\n", m_CurDir.c_str());
+	}
+	else {
+	        Print_Current_Date();
+                printf("Create Path:%s Failed!\n", m_CurDir.c_str());
+	}
 
 	SetUpRemoteServer();
 }
@@ -31,6 +39,7 @@ int CRemoteTcpServer::SetUpRemoteServer() {
 	// 创建socket 
 	if((m_Socket = socket(AF_INET, SOCK_STREAM, 0) ) == -1)
 	{
+	        Print_Current_Date();
 		printf("Create Socket Error!\n");
 		exit(1);
 	}
@@ -38,25 +47,28 @@ int CRemoteTcpServer::SetUpRemoteServer() {
         int flag = 1;
         if (setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) < 0)
 	{
-	       printf("socket setsockopt error=%d(%s)!!!\n", errno, strerror(errno));
-	       exit(1);
+	        Print_Current_Date();
+	        printf("Socket Setsockopt Error=%d(%s)!!!\n", errno, strerror(errno));
+	        exit(1);
 	}
 
 	//绑定socket和服务端(本地)地址 
 	if (bind(m_Socket, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
 	{
+	        Print_Current_Date();
 		printf("Server Bind Failed!\n");
-		perror("Bind Error:");
 		exit(1);
 	}
 
 	//监听 
 	if (listen(m_Socket, 10) == -1)
 	{
+	        Print_Current_Date();
 		printf("Server Listen Failed!\n");
 		exit(1);
 	}
 
+	Print_Current_Date();
 	printf("Listening To Client...\n");
 
 	sockaddr_in client_addr;
@@ -70,6 +82,8 @@ int CRemoteTcpServer::SetUpRemoteServer() {
 		printf("Server Accept Failed!\n");
 		return -1;
 	}
+	Print_Current_Date();
+	printf("Client Connect Successfully!\n");
 
 	return 0;
 }
@@ -109,8 +123,10 @@ int CRemoteTcpServer::RecFile() {
 		m_SaveFileName.clear();
 		string strSubDir = Get_Current_Dir();
 		m_SaveFileName = strSubDir + string(file_name);
-		Print_Current_Date();
-		printf("Save File： %s\n", m_SaveFileName.c_str());
+		if(m_SaveFileName != strSubDir) {
+		        Print_Current_Date();
+		        printf("Save File: %s\n", m_SaveFileName.c_str());
+		}
 
 		//接收文件大小数据
 		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
