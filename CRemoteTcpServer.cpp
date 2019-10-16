@@ -56,34 +56,50 @@ int CRemoteTcpServer::SetUpRemoteServer() {
 		printf("Server Listen Failed!\n");
 		exit(1);
 	}
+
+	printf("Listening To Client...\n");
+
+	sockaddr_in client_addr;
+	socklen_t sin_size = sizeof(struct sockaddr);
+
+	m_New_Socket = accept(m_Socket, (struct sockaddr *)&client_addr, &sin_size);
+
+	if (m_New_Socket == -1)
+	{
+		Print_Current_Date();
+		printf("Server Accept Failed!\n");
+		return -1;
+	}
+
 	return 0;
 }
 
 int CRemoteTcpServer::RecFile() {
 	while (1)
 	{
-	        //SetUpRemoteServer();
-		Print_Current_Date();
-		printf("Listening To Client...\n");
-
-		sockaddr_in client_addr;
-		socklen_t sin_size = sizeof(struct sockaddr);
-
-		m_New_Socket = accept(m_Socket, (struct sockaddr *)&client_addr, &sin_size);
-
-		if (m_New_Socket == -1)
-		{
-			Print_Current_Date();
-			printf("Server Accept Failed!\n");
-			return -1;
-		}
+//		Print_Current_Date();
+//		printf("Listening To Client...\n");
+//
+//		sockaddr_in client_addr;
+//		socklen_t sin_size = sizeof(struct sockaddr);
+//
+//		m_New_Socket = accept(m_Socket, (struct sockaddr *)&client_addr, &sin_size);
+//
+//		if (m_New_Socket == -1)
+//		{
+//			Print_Current_Date();
+//			printf("Server Accept Failed!\n");
+//			return -1;
+//		}
 
 		char buffer[BUFFER_SIZE];
 		memset(buffer, 0, BUFFER_SIZE);
 		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
 		{
-			Print_Current_Date();
-			printf("Server Receive Data Failed!");
+                        #ifndef NDEBUG
+			    Print_Current_Date();
+			    printf("Server Receive Data Failed!\n");
+                        #endif
 			return -1;
 		}
 
@@ -94,13 +110,15 @@ int CRemoteTcpServer::RecFile() {
 		string strSubDir = Get_Current_Dir();
 		m_SaveFileName = strSubDir + string(file_name);
 		Print_Current_Date();
-		printf("保存文件： %s\n", m_SaveFileName.c_str());
+		printf("Save File： %s\n", m_SaveFileName.c_str());
 
 		//接收文件大小数据
 		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
 		{
-			Print_Current_Date();
-			printf("Server Receive Data Failed!");
+                        #ifndef NDEBUG
+			    Print_Current_Date();
+			    printf("Server Receive Data Failed!\n");
+			#endif
 			return -1;
 		}
 		char file_size[FILE_NAME_MAX_SIZE + 1];
@@ -112,8 +130,10 @@ int CRemoteTcpServer::RecFile() {
 		FILE* fp = fopen(m_SaveFileName.c_str(), "wb"); //windows下是"wb",表示打开一个只写的二进制文件 
 		if (NULL == fp)
 		{
-			Print_Current_Date();
-			printf("File: %s Can Not Open To Write\n", m_SaveFileName.c_str());
+                        #ifndef NDEBUG
+			    Print_Current_Date();
+			    printf("File: %s Can Not Open To Write\n", m_SaveFileName.c_str());
+                        #endif
 			return -1;
 		}
 		else
@@ -126,8 +146,10 @@ int CRemoteTcpServer::RecFile() {
 				m_Remained_Size = m_Full_Size - m_Received_Size;
 				if (fwrite(buffer, sizeof(char), length, fp) < length)
 				{
-					Print_Current_Date();
-					printf("File: %s Write Failed\n", m_SaveFileName.c_str());
+                                        #ifndef NDEBUG
+			    		    Print_Current_Date();
+					    printf("File: %s Write Failed\n", m_SaveFileName.c_str());
+					#endif
 					break;
 				}
 				memset(buffer, 0, BUFFER_SIZE);
@@ -142,18 +164,20 @@ int CRemoteTcpServer::RecFile() {
 			//如果接收失败
 			if (length < 0)
 			{
-				Print_Current_Date();
-				printf("Server Receive Data Failed!");
+                                #ifndef NDEBUG
+				    Print_Current_Date();
+			            printf("Server Receive Data Failed!\n");
+				#endif
 				return -1;
 			}
 			Print_Current_Date();
 			printf("Receive File: %s From Client Successful!\n", file_name);
 		}
 		fclose(fp);
-		close(m_New_Socket);
-	        //close(m_Socket);
+		//close(m_New_Socket);
+		sleep(1);
 	}
-	close(m_Socket);
+	//close(m_Socket);
 	return 0;
 }
 

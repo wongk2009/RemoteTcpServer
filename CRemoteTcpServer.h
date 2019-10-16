@@ -20,6 +20,7 @@
 
 using namespace std;
 
+#define NDEBUG
 #define PORT 1502 
 #define SERVER_IP "122.51.1.204" 
 #define BUFFER_SIZE 1024 
