@@ -106,6 +106,7 @@ int CRemoteTcpServer::RecFile() {
 //			return -1;
 //		}
 
+                int i = 0;
 		char buffer[BUFFER_SIZE];
 		memset(buffer, 0, BUFFER_SIZE);
 		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
@@ -168,6 +169,7 @@ int CRemoteTcpServer::RecFile() {
 					#endif
 					break;
 				}
+				printf("%d: File Transferring %-10.2f%\n", ++i, (m_Received_Size * 100) / m_Full_Size);
 				memset(buffer, 0, BUFFER_SIZE);
 				//接收完毕后，退出接收
 				if (m_Remained_Size == 0) {
