@@ -3,6 +3,7 @@
 CRemoteTcpServer::CRemoteTcpServer() {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(PORT);
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	m_InitDate = Get_Current_Date();
 	Get_Current_Dir();
@@ -26,8 +27,6 @@ CRemoteTcpServer::CRemoteTcpServer() {
 	        Print_Current_Date();
                 printf("Create Path:%s Failed!\n", m_CurDir.c_str());
 	}
-
-	SetUpRemoteServer();
 }
 
 CRemoteTcpServer::~CRemoteTcpServer() {
@@ -89,112 +88,148 @@ int CRemoteTcpServer::SetUpRemoteServer() {
 }
 
 int CRemoteTcpServer::RecFile() {
-	while (1)
+	char buffer[BUFFER_SIZE];
+
+        //接收心跳包
+	memset(buffer, 0, BUFFER_SIZE);
+	if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
 	{
-//		Print_Current_Date();
-//		printf("Listening To Client...\n");
-//
-//		sockaddr_in client_addr;
-//		socklen_t sin_size = sizeof(struct sockaddr);
-//
-//		m_New_Socket = accept(m_Socket, (struct sockaddr *)&client_addr, &sin_size);
-//
-//		if (m_New_Socket == -1)
-//		{
-//			Print_Current_Date();
-//			printf("Server Accept Failed!\n");
-//			return -1;
-//		}
+            #ifndef NDEBUG
+	        Print_Current_Date();
+		printf("Server Connect Failed!\n");
+            #endif
+	    close(m_New_Socket);
+	    close(m_Socket);
+	    return -1;
+	}
+	else {
+	    if(buffer[0] != 0x55) {
+                #ifndef NDEBUG
+    	            Print_Current_Date();
+    		    printf("Server Connect Failed!\n");
+                #endif
+    	        close(m_New_Socket);
+	        close(m_Socket);
+    	        return -1;
+	    }
+	}
+	memset(buffer, 0, BUFFER_SIZE);
+	buffer[0] = 0x55;
+	if (send(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0) {
+            #ifndef NDEBUG
+	        Print_Current_Date();
+		printf("Server Connect Failed!\n");
+            #endif
+	    close(m_New_Socket);
+	    close(m_Socket);
+	    return -1;
+	}
 
-                int i = 0;
-		char buffer[BUFFER_SIZE];
+        //接收文件名
+	memset(buffer, 0, BUFFER_SIZE);
+	if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
+	{
+                #ifndef NDEBUG
+		    Print_Current_Date();
+		    printf("Server Receive Data Failed!\n");
+                #endif
+		close(m_New_Socket);
+		close(m_Socket);
+		return -1;
+	}
+	else {
+	    if(buffer[0] == 0x55) {
+                #ifndef NDEBUG
+    	            //Print_Current_Date();
+    		    //printf("Hreat Beat Detect!\n");
+                #endif
+    	        close(m_New_Socket);
+	        close(m_Socket);
+    	        return -1;
+	    }
+	}
+
+	char file_name[FILE_NAME_MAX_SIZE + 1];
+	memset(file_name, 0, FILE_NAME_MAX_SIZE + 1);
+	strncpy(file_name, buffer, strlen(buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(buffer));
+	m_SaveFileName.clear();
+	string strSubDir = Get_Current_Dir();
+	m_SaveFileName = strSubDir + string(file_name);
+	if(m_SaveFileName != strSubDir) {
+	        Print_Current_Date();
+	        printf("Save File: %s\n", m_SaveFileName.c_str());
+	}
+
+	//接收文件大小数据
+	memset(buffer, 0, BUFFER_SIZE);
+	if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
+	{
+                #ifndef NDEBUG
+		    Print_Current_Date();
+		    printf("Server Receive Data Failed!\n");
+		#endif
+		close(m_New_Socket);
+		close(m_Socket);
+		return -1;
+	}
+	char file_size[FILE_NAME_MAX_SIZE + 1];
+	memset(file_size, 0, FILE_NAME_MAX_SIZE + 1);
+	strncpy(file_size, buffer, strlen(buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(buffer));
+	m_Full_Size = atoi(file_size);
+
+	//打开文件，准备写入 
+	FILE* fp = fopen(m_SaveFileName.c_str(), "wb"); //windows下是"wb",表示打开一个只写的二进制文件 
+	if (NULL == fp)
+	{
+                #ifndef NDEBUG
+		    Print_Current_Date();
+		    printf("File: %s Can Not Open To Write\n", m_SaveFileName.c_str());
+                #endif
+		//close(m_New_Socket);
+		//close(m_Socket);
+		//return -1;
+	}
+	else
+	{
 		memset(buffer, 0, BUFFER_SIZE);
-		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
+		int length = 0;
+		while ((length = recv(m_New_Socket, buffer, BUFFER_SIZE, 0)) > 0)
 		{
-                        #ifndef NDEBUG
-			    Print_Current_Date();
-			    printf("Server Receive Data Failed!\n");
-                        #endif
-			return -1;
-		}
-
-		char file_name[FILE_NAME_MAX_SIZE + 1];
-		memset(file_name, 0, FILE_NAME_MAX_SIZE + 1);
-		strncpy(file_name, buffer, strlen(buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(buffer));
-		m_SaveFileName.clear();
-		string strSubDir = Get_Current_Dir();
-		m_SaveFileName = strSubDir + string(file_name);
-		if(m_SaveFileName != strSubDir) {
-		        Print_Current_Date();
-		        printf("Save File: %s\n", m_SaveFileName.c_str());
-		}
-
-		//接收文件大小数据
-		if (recv(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0)
-		{
-                        #ifndef NDEBUG
-			    Print_Current_Date();
-			    printf("Server Receive Data Failed!\n");
-			#endif
-			return -1;
-		}
-		char file_size[FILE_NAME_MAX_SIZE + 1];
-		memset(file_size, 0, FILE_NAME_MAX_SIZE + 1);
-		strncpy(file_size, buffer, strlen(buffer) > FILE_NAME_MAX_SIZE ? FILE_NAME_MAX_SIZE : strlen(buffer));
-		m_Full_Size = atoi(file_size);
-
-		//打开文件，准备写入 
-		FILE* fp = fopen(m_SaveFileName.c_str(), "wb"); //windows下是"wb",表示打开一个只写的二进制文件 
-		if (NULL == fp)
-		{
-                        #ifndef NDEBUG
-			    Print_Current_Date();
-			    printf("File: %s Can Not Open To Write\n", m_SaveFileName.c_str());
-                        #endif
-			return -1;
-		}
-		else
-		{
-			memset(buffer, 0, BUFFER_SIZE);
-			int length = 0;
-			while ((length = recv(m_New_Socket, buffer, BUFFER_SIZE, 0)) > 0)
-			{
-				m_Received_Size += length;
-				m_Remained_Size = m_Full_Size - m_Received_Size;
-				if (fwrite(buffer, sizeof(char), length, fp) < length)
-				{
-                                        #ifndef NDEBUG
-			    		    Print_Current_Date();
-					    printf("File: %s Write Failed\n", m_SaveFileName.c_str());
-					#endif
-					break;
-				}
-				printf("%d: File Transferring %-10.2f%\n", ++i, (m_Received_Size * 100) / m_Full_Size);
-				memset(buffer, 0, BUFFER_SIZE);
-				//接收完毕后，退出接收
-				if (m_Remained_Size == 0) {
-					m_Received_Size = 0;
-					m_Full_Size = 0;
-					m_Remained_Size = 0;
-					break;
-				}
-			}
-			//如果接收失败
-			if (length < 0)
+			m_Received_Size += length;
+			m_Remained_Size = m_Full_Size - m_Received_Size;
+			if (fwrite(buffer, sizeof(char), length, fp) < length)
 			{
                                 #ifndef NDEBUG
-				    Print_Current_Date();
-			            printf("Server Receive Data Failed!\n");
+		    		    Print_Current_Date();
+				    printf("File: %s Write Failed\n", m_SaveFileName.c_str());
 				#endif
-				return -1;
+				break;
 			}
-			Print_Current_Date();
-			printf("Receive File: %s From Client Successful!\n", file_name);
+			memset(buffer, 0, BUFFER_SIZE);
+			//接收完毕后，退出接收
+			if (m_Remained_Size == 0) {
+				m_Received_Size = 0;
+				m_Full_Size = 0;
+				m_Remained_Size = 0;
+				break;
+			}
 		}
-		fclose(fp);
-		//close(m_New_Socket);
-		sleep(1);
-	}
+		//如果接收失败
+		if (length < 0)
+		{
+                        #ifndef NDEBUG
+			    Print_Current_Date();
+		            printf("Server Receive Data Failed!\n");
+			#endif
+		        close(m_New_Socket);
+		        close(m_Socket);
+			return -1;
+		}
+		Print_Current_Date();
+		printf("Receive File: %s From Client Successful!\n", file_name);
+        	fclose(fp);
+        	//close(m_New_Socket);
+        }
 	//close(m_Socket);
 	return 0;
 }

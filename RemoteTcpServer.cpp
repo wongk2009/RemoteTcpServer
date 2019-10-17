@@ -6,9 +6,13 @@
 
 int main()
 {
-	CRemoteTcpServer SeverCollector = CRemoteTcpServer();
+	CRemoteTcpServer ServerCollector = CRemoteTcpServer();
+	ServerCollector.SetUpRemoteServer();
 	while(1) {
-            SeverCollector.RecFile();
+            int Rec_Result = ServerCollector.RecFile();
+	    if(Rec_Result == -1){
+	        ServerCollector.SetUpRemoteServer();
+	    }
 	}
 }
 
