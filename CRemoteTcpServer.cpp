@@ -6,8 +6,9 @@ CRemoteTcpServer::CRemoteTcpServer() {
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	m_InitDate = Get_Current_Date();
-	Get_Current_Dir();
+	m_CurrentDate = m_InitDate;
 
+        //建立Data/文件夹
         int isCreate = mkdir(InitDir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
 	if( !isCreate ) {
 	        Print_Current_Date();
@@ -17,16 +18,7 @@ CRemoteTcpServer::CRemoteTcpServer() {
 	        Print_Current_Date();
                 printf("Create Path:%s Failed!\n", InitDir.c_str());
 	}
-
-        isCreate = mkdir(m_CurDir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-	if( !isCreate ) {
-	        Print_Current_Date();
-	        printf("Create Path:%s\n", m_CurDir.c_str());
-	}
-	else {
-	        Print_Current_Date();
-                printf("Create Path:%s Failed!\n", m_CurDir.c_str());
-	}
+        Make_Current_Dir();
 }
 
 CRemoteTcpServer::~CRemoteTcpServer() {
@@ -96,7 +88,7 @@ int CRemoteTcpServer::RecFile() {
 	{
             #ifndef NDEBUG
 	        Print_Current_Date();
-		printf("Server Connect Failed!\n");
+		printf("Server Connect Receive Failed!\n");
             #endif
 	    close(m_New_Socket);
 	    close(m_Socket);
@@ -106,7 +98,7 @@ int CRemoteTcpServer::RecFile() {
 	    if(buffer[0] != 0x55) {
                 #ifndef NDEBUG
     	            Print_Current_Date();
-    		    printf("Server Connect Failed!\n");
+    		    printf("Server Heart not 0x55!\n");
                 #endif
     	        close(m_New_Socket);
 	        close(m_Socket);
@@ -118,12 +110,15 @@ int CRemoteTcpServer::RecFile() {
 	if (send(m_New_Socket, buffer, BUFFER_SIZE, 0) < 0) {
             #ifndef NDEBUG
 	        Print_Current_Date();
-		printf("Server Connect Failed!\n");
+		printf("Server Connect Send Failed!\n");
             #endif
 	    close(m_New_Socket);
 	    close(m_Socket);
 	    return -1;
 	}
+	Print_Current_Date();
+	printf("Heart Beat Receive!\n");
+
 
         //接收文件名
 	memset(buffer, 0, BUFFER_SIZE);
@@ -131,22 +126,18 @@ int CRemoteTcpServer::RecFile() {
 	{
                 #ifndef NDEBUG
 		    Print_Current_Date();
-		    printf("Server Receive Data Failed!\n");
+		    printf("Receive File Name Failed!\n");
                 #endif
 		close(m_New_Socket);
 		close(m_Socket);
 		return -1;
 	}
+	string tmpDate = Get_Current_Date();
+	if(tmpDate == m_CurrentDate) {
+	}
 	else {
-	    if(buffer[0] == 0x55) {
-                #ifndef NDEBUG
-    	            //Print_Current_Date();
-    		    //printf("Hreat Beat Detect!\n");
-                #endif
-    	        close(m_New_Socket);
-	        close(m_Socket);
-    	        return -1;
-	    }
+		m_CurrentDate = Get_Current_Date();
+                Make_Current_Dir();
 	}
 
 	char file_name[FILE_NAME_MAX_SIZE + 1];
@@ -277,4 +268,20 @@ string CRemoteTcpServer::Get_Current_Date() {
 	}
 	string strCurDate = strYear + "-" + strMonth + "-" + strDay;
 	return strCurDate;
+}
+
+int CRemoteTcpServer::Make_Current_Dir() {
+	Get_Current_Dir();
+
+        int isCreate = mkdir(m_CurDir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
+	if( !isCreate ) {
+	        Print_Current_Date();
+	        printf("Create Path:%s\n", m_CurDir.c_str());
+	}
+	else {
+	        Print_Current_Date();
+                printf("Create Path:%s Failed!\n", m_CurDir.c_str());
+		return -1;
+	}
+	return 0;
 }

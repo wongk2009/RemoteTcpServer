@@ -45,12 +45,14 @@ private:
 	struct tm* ptminfo;
 	
 	string m_InitDate;
+	string m_CurrentDate;
 	string m_CurDir;
 	string m_SaveFileName;
 
 	int Print_Current_Date();
 	string Get_Current_Dir();
 	string Get_Current_Date();
+	int Make_Current_Dir();
 
 	unsigned int m_Received_Size = 0;
 	unsigned int m_Full_Size = 0;
